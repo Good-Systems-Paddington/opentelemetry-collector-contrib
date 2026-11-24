@@ -1,0 +1,4 @@
+change_type: enhancement
+component: cmd/otelcontribcol
+note: Include file storage in the Goodnotes gateway for persistent exporter queues.
+issues: []

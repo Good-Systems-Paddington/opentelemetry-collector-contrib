@@ -122,6 +122,35 @@ def verify(image, network, version):
                         print(json.dumps({"clickhouse": version, "schema": schema, "protocol": protocol, "rows": rows}), flush=True)
 
 
+def verify_storage(image):
+    config = {
+        "extensions": {"file_storage": {
+            "directory": "/tmp/queue", "create_directory": True, "fsync": True,
+            "compaction": {"directory": "/tmp/compaction", "on_start": True, "on_rebound": True},
+        }},
+        "receivers": {"otlp": {"protocols": {"http": {"endpoint": "0.0.0.0:4318"}}}},
+        "exporters": {"otlphttp": {
+            "endpoint": "http://127.0.0.1:1",
+            "retry_on_failure": {"enabled": True, "max_elapsed_time": "0s"},
+            "sending_queue": {
+                "storage": "file_storage", "sizer": "bytes", "queue_size": 16 * 1024 ** 3,
+                "wait_for_result": False,
+                "batch": {"sizer": "items", "min_size": 10000, "max_size": 0, "flush_timeout": "5s"},
+            },
+        }},
+        "service": {
+            "extensions": ["file_storage"],
+            "pipelines": {"logs": {"receivers": ["otlp"], "exporters": ["otlphttp"]}},
+        },
+    }
+    with tempfile.TemporaryDirectory() as directory:
+        path = pathlib.Path(directory) / "config.json"
+        path.write_text(json.dumps(config))
+        path.chmod(0o644)
+        docker("run", "--rm", "-v", f"{path}:/config.json:ro", image, "validate", "--config=/config.json")
+    print(json.dumps({"file_storage": "validated", "queue": "persistent byte-sized with item batching"}), flush=True)
+
+
 def verify_auth(image):
     secret = "fixture-" + uuid.uuid4().hex
     config = {
@@ -162,6 +191,7 @@ def verify_auth(image):
                 print(json.dumps({"auth": "rejected", "body": body}), flush=True)
 
 
+verify_storage(sys.argv[1])
 verify_auth(sys.argv[1])
 network = "gateway-roundtrip-" + uuid.uuid4().hex
 docker("network", "create", network)

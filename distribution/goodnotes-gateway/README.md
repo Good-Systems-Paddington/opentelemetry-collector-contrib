@@ -9,6 +9,10 @@ detection and insertion are retained in both formats. All components use the
 0.141.0 release and OCB 0.141.0. Existing tables must have
 `ObservedTimestamp DateTime64(9)` before adoption; see the exporter README.
 
+The distribution includes `file_storage` 0.141.0 for PVC-backed exporter queues.
+The image smoke test validates byte-sized persistent queues, item batching,
+unlimited retry and fsync with startup/rebound compaction.
+
 The bearer token extension is extracted from the same commit with upstream
 open-telemetry/opentelemetry-collector-contrib#46271 backported: a rejected
 request's 401 body no longer echoes the presented `Authorization` value.
