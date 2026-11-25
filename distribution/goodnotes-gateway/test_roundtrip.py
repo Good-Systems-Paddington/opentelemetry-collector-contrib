@@ -151,6 +151,53 @@ def verify_storage(image):
     print(json.dumps({"file_storage": "validated", "queue": "persistent byte-sized with item batching"}), flush=True)
 
 
+def verify_overflow(image):
+    s3 = {"region": "us-west-2", "s3_bucket": "overflow", "s3_prefix": "metrics"}
+    gateway = {
+        "extensions": {"file_storage": {"directory": "/tmp/queue", "create_directory": True, "fsync": True}},
+        "receivers": {"otlp": {"protocols": {"http": {"endpoint": "0.0.0.0:4318"}}}},
+        "connectors": {"failover/metrics": {
+            "priority_levels": [["metrics/clickhouse"], ["metrics/overflow"]],
+            "retry_interval": "1m",
+            "sending_queue": {"enabled": False},
+        }},
+        "exporters": {
+            "otlphttp": {
+                "endpoint": "http://127.0.0.1:1",
+                "retry_on_failure": {"enabled": True, "max_elapsed_time": "0s"},
+                "sending_queue": {"storage": "file_storage", "sizer": "bytes", "queue_size": 4096, "wait_for_result": False},
+            },
+            "awss3": {
+                "s3uploader": {**s3, "s3_partition_format": "year=%Y/month=%m/day=%d/hour=%H/minute=%M", "compression": "gzip"},
+                "marshaler": "otlp_proto",
+                "sending_queue": {"enabled": True, "wait_for_result": True, "sizer": "bytes", "queue_size": 268435456,
+                                  "batch": {"sizer": "items", "min_size": 10000, "max_size": 50000, "flush_timeout": "5s"}},
+            },
+        },
+        "service": {
+            "extensions": ["file_storage"],
+            "pipelines": {
+                "metrics/in": {"receivers": ["otlp"], "exporters": ["failover/metrics"]},
+                "metrics/clickhouse": {"receivers": ["failover/metrics"], "exporters": ["otlphttp"]},
+                "metrics/overflow": {"receivers": ["failover/metrics"], "exporters": ["awss3"]},
+            },
+        },
+    }
+    replay = {
+        "receivers": {"awss3": {"starttime": "2026-11-24 00:00", "endtime": "2026-11-25 00:00",
+                                "s3downloader": {**s3, "s3_partition": "minute"}}},
+        "exporters": {"otlphttp": {"endpoint": "http://127.0.0.1:1"}},
+        "service": {"pipelines": {"metrics": {"receivers": ["awss3"], "exporters": ["otlphttp"]}}},
+    }
+    with tempfile.TemporaryDirectory() as directory:
+        for name, config in [("gateway", gateway), ("replay", replay)]:
+            path = pathlib.Path(directory) / f"{name}.json"
+            path.write_text(json.dumps(config))
+            path.chmod(0o644)
+            docker("run", "--rm", "-v", f"{path}:/config.json:ro", image, "validate", "--config=/config.json")
+    print(json.dumps({"overflow": "validated", "replay": "validated"}), flush=True)
+
+
 def verify_auth(image):
     secret = "fixture-" + uuid.uuid4().hex
     config = {
@@ -192,6 +239,7 @@ def verify_auth(image):
 
 
 verify_storage(sys.argv[1])
+verify_overflow(sys.argv[1])
 verify_auth(sys.argv[1])
 network = "gateway-roundtrip-" + uuid.uuid4().hex
 docker("network", "create", network)

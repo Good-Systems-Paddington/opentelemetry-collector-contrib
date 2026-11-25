@@ -9,6 +9,8 @@ cd build
 go get \
   github.com/andybalholm/brotli@v1.2.7 \
   github.com/antchfx/xpath@v1.3.6 \
+  github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream@v1.7.8 \
+  github.com/aws/aws-sdk-go-v2/service/s3@v1.97.3 \
   github.com/expr-lang/expr@v1.17.7 \
   github.com/klauspost/compress@v1.20.3 \
   go.opentelemetry.io/contrib/bridges/otelzap@v0.21.0 \

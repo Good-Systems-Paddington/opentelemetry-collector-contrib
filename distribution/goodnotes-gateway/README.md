@@ -9,7 +9,11 @@ detection and insertion are retained in both formats. All components use the
 0.141.0 release and OCB 0.141.0. Existing tables must have
 `ObservedTimestamp DateTime64(9)` before adoption; see the exporter README.
 
-The distribution includes `file_storage` 0.141.0 for PVC-backed exporter queues.
+The distribution includes `file_storage` 0.141.0 for PVC-backed exporter queues,
+and `failover` connector, `awss3` exporter and `awss3` receiver 0.141.0 so a
+full ClickHouse queue overflows to S3 and a replay Job loads a time range back.
+Disable the failover connector's own `sending_queue`: when enabled (the
+default) it acknowledges before delivery and drops data both levels refuse.
 The image smoke test validates byte-sized persistent queues, item batching,
 unlimited retry and fsync with startup/rebound compaction.
 
@@ -50,7 +54,7 @@ unauthorized requests to a bearer-authenticated receiver and checks that the
 
 The Goodnotes gateway workflow tests before publishing. Only a manual run on
 this fork's `main` with `publish=true` can write packages. It publishes
-`ghcr.io/goodnotesglobal/otel-gateway:0.141.0-observed.2-<source-sha>` for
+`ghcr.io/goodnotesglobal/otel-gateway:0.141.0-observed.3-<source-sha>` for
 linux/amd64 and linux/arm64 and records the immutable manifest digest in the
 run summary. Adopt the digest, not a mutable tag. Base images and source are
 pinned by digest/commit; Go modules are versioned and verified by Go checksums.
