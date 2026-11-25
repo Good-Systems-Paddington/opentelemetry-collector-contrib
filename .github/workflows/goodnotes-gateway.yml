@@ -82,11 +82,11 @@ jobs:
           context: /tmp/gateway
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/goodnotesglobal/otel-gateway:0.141.0-observed.2-${{ github.sha }}
+          tags: ghcr.io/goodnotesglobal/otel-gateway:0.141.0-observed.3-${{ github.sha }}
           labels: |
             org.opencontainers.image.source=https://github.com/GoodnotesGlobal/opentelemetry-collector-contrib
             org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.version=0.141.0-observed.2
+            org.opencontainers.image.version=0.141.0-observed.3
       - name: Verify private visibility and record immutable image
         env:
           DIGEST: ${{ steps.image.outputs.digest }}
